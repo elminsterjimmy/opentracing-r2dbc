@@ -111,7 +111,7 @@ public class OpenTracingExecutorListenerTest {
     Assert.assertEquals("SELECT 1", spans.get(0).tags().get("db.statement"));
     Assert.assertEquals("thread-name", spans.get(0).tags().get("threadName"));
     Assert.assertEquals("300", spans.get(0).tags().get("threadId"));
-    Assert.assertEquals("true", spans.get(0).tags().get("success"));
+    Assert.assertEquals(true, spans.get(0).tags().get("success"));
   }
 
   @Test

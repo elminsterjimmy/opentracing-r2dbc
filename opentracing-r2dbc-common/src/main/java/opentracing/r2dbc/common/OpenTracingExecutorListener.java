@@ -9,21 +9,9 @@ import io.r2dbc.proxy.core.QueryInfo;
 import io.r2dbc.proxy.listener.ProxyMethodExecutionListener;
 
 import static java.util.stream.Collectors.joining;
+import static opentracing.r2dbc.common.TagConstants.*;
 
 public class OpenTracingExecutorListener implements ProxyMethodExecutionListener {
-
-  private static final String TAG_CONNECTION_ID = "connectionId";
-  private static final String TAG_CONNECTION_CLOSE_THREAD_ID = "threadIdOnClose";
-  private static final String TAG_CONNECTION_CLOSE_THREAD_NAME = "threadNameOnClose";
-  private static final String TAG_THREAD_ID = "threadId";
-  private static final String TAG_THREAD_NAME = "threadName";
-  private static final String TAG_QUERY_SUCCESS = "success";
-  private static final String TAG_QUERY_MAPPED_RESULT_COUNT = "mappedResultCount";
-  private static final String TAG_TRANSACTION_SAVEPOINT = "savepoint";
-  private static final String TAG_TRANSACTION_COUNT = "transactionCount";
-  private static final String TAG_COMMIT_COUNT = "commitCount";
-  private static final String TAG_ROLLBACK_COUNT = "rollbackCount";
-  private static final String TAG_ANNOTATION = "annotation";
 
   static final String CONNECTION_SPAN_KEY = "connectionSpan";
   static final String TRANSACTION_SPAN_KEY = "transactionSpan";
@@ -68,9 +56,7 @@ public class OpenTracingExecutorListener implements ProxyMethodExecutionListener
     }
 
     ConnectionInfo connectionInfo = methodExecutionInfo.getConnectionInfo();
-
-    connectionSpan.setTag(TAG_ANNOTATION, ANNOTATION_CONNECTION_CREATED);
-
+    TAG_ANNOTATION.set(connectionSpan, ANNOTATION_CONNECTION_CREATED);
     connectionInfo.getValueStore().put(CONNECTION_SPAN_KEY, connectionSpan);
   }
 
@@ -83,12 +69,12 @@ public class OpenTracingExecutorListener implements ProxyMethodExecutionListener
       return;
     }
 
-    connectionSpan.setTag(TAG_CONNECTION_ID, connectionId);
-    connectionSpan.setTag(TAG_CONNECTION_CLOSE_THREAD_ID, String.valueOf(methodExecutionInfo.getThreadId()));
-    connectionSpan.setTag(TAG_CONNECTION_CLOSE_THREAD_NAME, methodExecutionInfo.getThreadName());
-    connectionSpan.setTag(TAG_TRANSACTION_COUNT, String.valueOf(connectionInfo.getTransactionCount()));
-    connectionSpan.setTag(TAG_COMMIT_COUNT, String.valueOf(connectionInfo.getCommitCount()));
-    connectionSpan.setTag(TAG_ROLLBACK_COUNT, String.valueOf(connectionInfo.getRollbackCount()));
+    TAG_CONNECTION_ID.set(connectionSpan, connectionId);
+    TAG_CONNECTION_CLOSE_THREAD_ID.set(connectionSpan, String.valueOf(methodExecutionInfo.getThreadId()));
+    TAG_CONNECTION_CLOSE_THREAD_NAME.set(connectionSpan, methodExecutionInfo.getThreadName());
+    TAG_TRANSACTION_COUNT.set(connectionSpan, connectionInfo.getTransactionCount());
+    TAG_COMMIT_COUNT.set(connectionSpan, connectionInfo.getCommitCount());
+    TAG_ROLLBACK_COUNT.set(connectionSpan, connectionInfo.getRollbackCount());
 
     Throwable thrown = methodExecutionInfo.getThrown();
     if (thrown != null) {
@@ -111,15 +97,13 @@ public class OpenTracingExecutorListener implements ProxyMethodExecutionListener
   @Override
   public void afterQuery(QueryExecutionInfo queryExecutionInfo) {
     Span querySpan = queryExecutionInfo.getValueStore().get(QUERY_SPAN_KEY, Span.class);
-    querySpan.setTag(TAG_THREAD_ID, String.valueOf(queryExecutionInfo.getThreadId()));
-    querySpan.setTag(TAG_THREAD_NAME, queryExecutionInfo.getThreadName());
-    querySpan.setTag(TAG_QUERY_SUCCESS, Boolean.toString(queryExecutionInfo.isSuccess()));
+    TAG_QUERY_SUCCESS.set(querySpan, queryExecutionInfo.isSuccess());
 
     Throwable thrown = queryExecutionInfo.getThrowable();
     if (thrown != null) {
       SpanUtils.onError(thrown, querySpan);
     } else {
-      querySpan.setTag(TAG_QUERY_MAPPED_RESULT_COUNT, Integer.toString(queryExecutionInfo.getCurrentResultCount()));
+      TAG_QUERY_MAPPED_RESULT_COUNT.set(querySpan, queryExecutionInfo.getCurrentResultCount());
       SpanUtils.finishSpan(querySpan, queryExecutionInfo, tracingConfiguration);
     }
   }
@@ -142,15 +126,12 @@ public class OpenTracingExecutorListener implements ProxyMethodExecutionListener
     ConnectionInfo connectionInfo = methodExecutionInfo.getConnectionInfo();
     Span transactionSpan = connectionInfo.getValueStore().get(TRANSACTION_SPAN_KEY, Span.class);
     if (transactionSpan != null) {
-      transactionSpan.setTag(TAG_ANNOTATION, transactionAnnotation);
-      transactionSpan.setTag(TAG_CONNECTION_ID, connectionInfo.getConnectionId());
-      transactionSpan.setTag(TAG_THREAD_ID, String.valueOf(methodExecutionInfo.getThreadId()));
-      transactionSpan.setTag(TAG_THREAD_NAME, methodExecutionInfo.getThreadName());
+      TAG_ANNOTATION.set(transactionSpan, transactionAnnotation);
       SpanUtils.finishSpan(transactionSpan, methodExecutionInfo, tracingConfiguration);
     }
     Span connectionSpan = connectionInfo.getValueStore().get(CONNECTION_SPAN_KEY, Span.class);
     if (connectionSpan != null) {
-      connectionSpan.setTag(TAG_ANNOTATION, connectionAnnotation);
+      TAG_ANNOTATION.set(connectionSpan, connectionAnnotation);
     }
   }
 
@@ -162,20 +143,16 @@ public class OpenTracingExecutorListener implements ProxyMethodExecutionListener
   @Override
   public void afterRollbackTransactionToSavepointOnConnection(MethodExecutionInfo methodExecutionInfo) {
     ConnectionInfo connectionInfo = methodExecutionInfo.getConnectionInfo();
-    String connectionId = connectionInfo.getConnectionId();
     String savepoint = (String) methodExecutionInfo.getMethodArgs()[0];
 
     Span transactionSpan = connectionInfo.getValueStore().get(TRANSACTION_SPAN_KEY, Span.class);
     if (transactionSpan != null) {
-      transactionSpan.setTag(TAG_ANNOTATION, ANNOTATION_ROLLBACK_TO_SAVEPOINT);
-      transactionSpan.setTag(TAG_TRANSACTION_SAVEPOINT, savepoint);
-      transactionSpan.setTag(TAG_CONNECTION_ID, connectionId);
-      transactionSpan.setTag(TAG_THREAD_ID, String.valueOf(methodExecutionInfo.getThreadId()));
-      transactionSpan.setTag(TAG_THREAD_NAME, methodExecutionInfo.getThreadName());
+      TAG_ANNOTATION.set(transactionSpan, ANNOTATION_ROLLBACK_TO_SAVEPOINT);
+      TAG_TRANSACTION_SAVEPOINT.set(transactionSpan, savepoint);
       SpanUtils.finishSpan(transactionSpan, methodExecutionInfo, tracingConfiguration);
     }
 
     Span connectionSpan = connectionInfo.getValueStore().get(CONNECTION_SPAN_KEY, Span.class);
-    connectionSpan.setTag(TAG_ANNOTATION, ANNOTATION_TRANSACTION_ROLLBACK_TO_SAVEPOINT);
+    TAG_ANNOTATION.set(connectionSpan, ANNOTATION_TRANSACTION_ROLLBACK_TO_SAVEPOINT);
   }
 }

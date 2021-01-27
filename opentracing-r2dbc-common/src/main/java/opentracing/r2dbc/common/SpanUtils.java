@@ -3,7 +3,6 @@ package opentracing.r2dbc.common;
 import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopSpan;
-import io.opentracing.tag.BooleanTag;
 import io.opentracing.tag.Tags;
 import io.r2dbc.proxy.core.ConnectionInfo;
 import io.r2dbc.proxy.core.ExecutionType;
@@ -16,25 +15,38 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+import static opentracing.r2dbc.common.TagConstants.*;
+
 public class SpanUtils {
 
-  private static final BooleanTag SLOW = new BooleanTag("slow");
   private static final String COMPONENT_NAME = "opentracing-r2dbc";
-  private static final String TAG_CONNECTION_ID = "connectionId";
-  private static final String TAG_CONNECTION_CREATE_THREAD_ID = "threadIdOnCreate";
-  private static final String TAG_CONNECTION_CREATE_THREAD_NAME = "threadNameOnCreate";
-  private static final String TAG_BATCH_SIZE = "batchSize";
-  private static final String TAG_QUERY_TYPE = "type";
 
   public static void finishSpan(Span span,
                                 QueryExecutionInfo queryExecutionInfo,
                                 TracingConfiguration tracingConfiguration) {
+    _finishSpan(span,
+        tracingConfiguration,
+        queryExecutionInfo.getExecuteDuration(),
+        queryExecutionInfo.getConnectionInfo(),
+        queryExecutionInfo.getThreadId(),
+        queryExecutionInfo.getThreadName());
+  }
+
+  private static void _finishSpan(Span span,
+                                  TracingConfiguration tracingConfiguration,
+                                  Duration executeDuration2,
+                                  ConnectionInfo connectionInfo,
+                                  long threadId,
+                                  String threadName) {
     if (isSlowQueryEnabled(tracingConfiguration)) {
-      Duration executeDuration = queryExecutionInfo.getExecuteDuration();
+      Duration executeDuration = executeDuration2;
       if (null != executeDuration && executeDuration.toMillis() > tracingConfiguration.getSlowQueryThresholdMs()) {
-        SLOW.set(span, true);
+        TAG_SLOW.set(span, true);
       }
     }
+    TAG_CONNECTION_ID.set(span, connectionInfo.getConnectionId());
+    TAG_THREAD_ID.set(span, String.valueOf(threadId));
+    TAG_THREAD_NAME.set(span, threadName);
     span.finish();
   }
 
@@ -46,19 +58,18 @@ public class SpanUtils {
   public static void finishSpan(Span span,
                                 MethodExecutionInfo methodExecutionInfo,
                                 TracingConfiguration tracingConfiguration) {
-    if (isSlowQueryEnabled(tracingConfiguration)) {
-      Duration executeDuration = methodExecutionInfo.getExecuteDuration();
-      if (null != executeDuration && executeDuration.toMillis() > tracingConfiguration.getSlowQueryThresholdMs()) {
-        SLOW.set(span, true);
-      }
-    }
-    span.finish();
+    _finishSpan(span,
+        tracingConfiguration,
+        methodExecutionInfo.getExecuteDuration(),
+        methodExecutionInfo.getConnectionInfo(),
+        methodExecutionInfo.getThreadId(),
+        methodExecutionInfo.getThreadName());
   }
 
   public static Span buildSpan(String operationName,
-                                MethodExecutionInfo methodExecutionInfo,
-                                Tracer tracer,
-                                TracingConfiguration tracingConfiguration) {
+                               MethodExecutionInfo methodExecutionInfo,
+                               Tracer tracer,
+                               TracingConfiguration tracingConfiguration) {
     if (!isTracingEnabled(tracingConfiguration, null)) {
       return NoopSpan.INSTANCE;
     }
@@ -110,9 +121,9 @@ public class SpanUtils {
         .map(conn -> conn.getMetadata())
         .orElse(null);
     tagDBType(span, metadata);
-    span.setTag(TAG_CONNECTION_ID, connectionId);
-    span.setTag(TAG_CONNECTION_CREATE_THREAD_ID, String.valueOf(methodExecutionInfo.getThreadId()));
-    span.setTag(TAG_CONNECTION_CREATE_THREAD_NAME, methodExecutionInfo.getThreadName());
+    TAG_CONNECTION_ID.set(span, connectionId);
+    TAG_CONNECTION_CREATE_THREAD_ID.set(span, String.valueOf(methodExecutionInfo.getThreadId()));
+    TAG_CONNECTION_CREATE_THREAD_NAME.set(span, methodExecutionInfo.getThreadName());
   }
 
   private static void decorate(Span span, String sql,
@@ -130,10 +141,10 @@ public class SpanUtils {
         .map(conn -> conn.getMetadata())
         .orElse(null);
     tagDBType(span, metadata);
-    span.setTag(TAG_CONNECTION_ID, connectionId);
-    span.setTag(TAG_QUERY_TYPE, queryExecutionInfo.getType().toString());
+    TAG_CONNECTION_ID.set(span, connectionId);
+    TAG_QUERY_TYPE.set(span, queryExecutionInfo.getType().toString());
     if (ExecutionType.BATCH == queryExecutionInfo.getType()) {
-      span.setTag(TAG_BATCH_SIZE, Integer.toString(queryExecutionInfo.getBatchSize()));
+      TAG_BATCH_SIZE.set(span, queryExecutionInfo.getBatchSize());
     }
   }
 
