@@ -5,7 +5,7 @@
     <groupId>io.opentracing.contrib</groupId>
     <artifactId>opentracing-r2dbc</artifactId>
     <packaging>pom</packaging>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0-SNAPSHOT</version>
     <modules>
         <module>opentracing-r2dbc-common</module>
         <module>opentracing-r2dbc-springboot-starter</module>
