@@ -1,6 +1,7 @@
 package opentracing.r2dbc.starter;
 
 import io.opentracing.Tracer;
+import io.r2dbc.proxy.listener.ProxyMethodExecutionListener;
 import opentracing.r2dbc.common.OpenTracingExecutorListener;
 import opentracing.r2dbc.common.TracingConfiguration;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,7 +27,7 @@ public class R2dbcOpentracingAutoConfig {
   }
 
   @Bean
-  public OpenTracingExecutorListener getR2dbcOpenTracer() {
+  public ProxyMethodExecutionListener getR2dbcOpenTracer() {
     return new OpenTracingExecutorListener(tracer, TracingConfiguration.TracingConfigurationBuilder
         .aTracingConfiguration()
         .withIgnoreStatements(r2dbcOpentracingConfiguration.getIgnoreStatements())

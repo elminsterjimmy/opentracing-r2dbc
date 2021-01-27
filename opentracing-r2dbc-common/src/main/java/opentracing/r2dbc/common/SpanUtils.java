@@ -114,14 +114,16 @@ public class SpanUtils {
     Tags.COMPONENT.set(span, COMPONENT_NAME);
 
     ConnectionInfo connectionInfo = methodExecutionInfo.getConnectionInfo();
-    String connectionId = connectionInfo.getConnectionId();
+    if (null != connectionInfo) {
+      String connectionId = connectionInfo.getConnectionId();
+      TAG_CONNECTION_ID.set(span, connectionId);
+    }
     ConnectionMetadata metadata = Optional.of(methodExecutionInfo)
         .map(info -> info.getConnectionInfo())
         .map(info -> info.getOriginalConnection())
         .map(conn -> conn.getMetadata())
         .orElse(null);
     tagDBType(span, metadata);
-    TAG_CONNECTION_ID.set(span, connectionId);
     TAG_CONNECTION_CREATE_THREAD_ID.set(span, String.valueOf(methodExecutionInfo.getThreadId()));
     TAG_CONNECTION_CREATE_THREAD_NAME.set(span, methodExecutionInfo.getThreadName());
   }
