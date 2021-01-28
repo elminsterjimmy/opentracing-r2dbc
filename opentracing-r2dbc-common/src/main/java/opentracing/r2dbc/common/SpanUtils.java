@@ -73,8 +73,8 @@ public class SpanUtils {
     if (!isTracingEnabled(tracingConfiguration, null)) {
       return NoopSpan.INSTANCE;
     }
-
     Tracer.SpanBuilder spanBuilder = tracer.buildSpan(operationName)
+        .asChildOf(tracer.activeSpan())
         .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT);
 
     Span span = spanBuilder.start();
@@ -102,6 +102,7 @@ public class SpanUtils {
     }
 
     Tracer.SpanBuilder spanBuilder = tracer.buildSpan(operationName)
+        .asChildOf(tracer.activeSpan())
         .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT);
 
     Span span = spanBuilder.start();

@@ -40,15 +40,12 @@ public class OpenTracingExecutorListener implements ProxyMethodExecutionListener
   public void beforeCreateOnConnectionFactory(MethodExecutionInfo methodExecutionInfo) {
     Span connectionSpan = SpanUtils.buildSpan(SPAN_NAME_R2DBC_CONNECTION, methodExecutionInfo,
         tracer, tracingConfiguration);
-    tracer.activateSpan(connectionSpan);
-
     methodExecutionInfo.getValueStore().put(INITIAL_CONNECTION_SPAN_KEY, connectionSpan);
   }
 
   @Override
   public void afterCreateOnConnectionFactory(MethodExecutionInfo methodExecutionInfo) {
     Span connectionSpan = methodExecutionInfo.getValueStore().get(INITIAL_CONNECTION_SPAN_KEY, Span.class);
-
     Throwable thrown = methodExecutionInfo.getThrown();
     if (thrown != null) {
       SpanUtils.onError(thrown, connectionSpan);
