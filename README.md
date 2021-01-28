@@ -50,5 +50,8 @@ opentracing:
     slowQueryThresholdMs: ${R2DBC_OPENTRACING_SHOW_QUERY_THRESHOLD:0}
     ignoreStatements: ${R2DBC_OPENTRACING_IGNORE_STATEMENTS:}
 ```
+
+## JaegerUI screen shot:
+![image](https://github.com/elminsterjimmy/opentracing-r2dbc/blob/master/images/JaegerUIScreenShot.png)
 ---
 Based on [r2dbc-proxy](https://github.com/r2dbc/r2dbc-proxy)
